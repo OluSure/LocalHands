@@ -12,8 +12,9 @@
         <a
           class="navbar-brand d-flex align-items-center fw-bolder fs-2 fst-italic"
           href="index.html"
-          ><div class="text-info">Local</div>
-          <div class="text-warning">Hands</div></a
+          ><div class="text-info">          ><div class="text-info">Work</div>
+</div>
+          <div class="text-warning">Link</div></a
         >
       </div>
     </nav>
@@ -40,16 +41,91 @@
           return;
         }
         profile.innerHTML =
-          "<h2>" +
-          user.name +
-          " (" +
-          user.username +
-          ")</h2><p>" +
-          (user.bio || "") +
-          "</p>" +
-          (user.avatar
-            ? '<img src="' + user.avatar + '" style="max-width:200px">'
-            : "");
+          '<div id="profileDetails">'
+            + "<h2>" + user.name + " (" + user.username + ")</h2>"
+            + '<p id="profileBio">' + (user.bio || "") + '</p>'
+            + (user.avatar ? '<img id="profileAvatar" src="' + user.avatar + '" style="max-width:200px">' : '')
+          + '</div>';
+
+        // If signed-in user is viewing their own profile, show Edit button
+        const curUser = window.LH.currentUser ? window.LH.currentUser() : null;
+        if (curUser && curUser.username === user.username) {
+          const editBtn = document.createElement('button');
+          editBtn.className = 'btn btn-outline-secondary mb-3';
+          editBtn.textContent = 'Edit Profile';
+          editBtn.id = 'editProfileBtn';
+          profile.insertBefore(editBtn, profile.firstChild);
+        }
+
+        // Build Edit Profile modal 
+        function ensureEditModal() {
+          if (document.getElementById('editProfileModal')) return document.getElementById('editProfileModal');
+          const div = document.createElement('div');
+          div.innerHTML = `
+            <div class="modal fade" id="editProfileModal" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                  <div class="modal-header"><h5 class="modal-title">Edit Profile</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                  <div class="modal-body">
+                    <form id="editProfileForm">
+                      <div class="mb-2"><label class="form-label">Display name</label><input class="form-control" name="displayName" id="fldDisplayName"></div>
+                      <div class="mb-2"><label class="form-label">Email</label><input class="form-control" type="email" name="email" id="fldEmail"></div>
+                      <div class="mb-2"><label class="form-label">Phone</label><input class="form-control" name="phone" id="fldPhone"></div>
+                      <div class="mb-2"><label class="form-label">NIN</label><input class="form-control" name="nin" id="fldNIN"></div>
+                      <div class="mb-2"><label class="form-label">State</label><input class="form-control" name="state" id="fldState"></div>
+                      <div class="mb-2"><label class="form-label">Home address</label><input class="form-control" name="address" id="fldAddress"></div>
+                      <div class="mb-2"><label class="form-label">Bio</label><textarea class="form-control" name="bio" id="fldBio" rows="3"></textarea></div>
+                      <div class="mb-2"><label class="form-label">Avatar URL</label><input class="form-control" name="avatar" id="fldAvatar"></div>
+                      <div class="text-end"><button class="btn btn-primary" type="submit">Save</button></div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+          document.body.appendChild(div);
+          return document.getElementById('editProfileModal');
+        }
+
+        // Open modal when Edit button clicked
+        const editBtnEl = document.getElementById('editProfileBtn');
+        if (editBtnEl) {
+          editBtnEl.addEventListener('click', function () {
+            const modalEl = ensureEditModal();
+            // populate fields
+            document.getElementById('fldDisplayName').value = user.name || '';
+            document.getElementById('fldEmail').value = user.email || '';
+            document.getElementById('fldPhone').value = user.phone || '';
+            document.getElementById('fldNIN').value = user.nin || '';
+            document.getElementById('fldState').value = user.state || '';
+            document.getElementById('fldAddress').value = user.address || '';
+            document.getElementById('fldBio').value = user.bio || '';
+            document.getElementById('fldAvatar').value = user.avatar || '';
+            const m = new bootstrap.Modal(modalEl);
+            m.show();
+            // bind save
+            const form = document.getElementById('editProfileForm');
+            form.onsubmit = function (e) {
+              e.preventDefault();
+              // update user in localStorage
+              try {
+                const users = JSON.parse(localStorage.getItem('lh_users') || '[]');
+                const idx = users.findIndex(u => u.username === user.username);
+                if (idx === -1) return window.LH.showInfo('Error', 'User not found');
+                users[idx].name = document.getElementById('fldDisplayName').value || users[idx].name;
+                users[idx].email = document.getElementById('fldEmail').value || users[idx].email;
+                users[idx].phone = document.getElementById('fldPhone').value || users[idx].phone;
+                users[idx].nin = document.getElementById('fldNIN').value || users[idx].nin;
+                users[idx].state = document.getElementById('fldState').value || users[idx].state;
+                users[idx].address = document.getElementById('fldAddress').value || users[idx].address;
+                users[idx].bio = document.getElementById('fldBio').value || users[idx].bio;
+                users[idx].avatar = document.getElementById('fldAvatar').value || users[idx].avatar;
+                localStorage.setItem('lh_users', JSON.stringify(users));
+                m.hide();
+                window.LH.showInfo('Saved', 'Profile updated').then(function () { location.reload(); });
+              } catch (err) { console.error(err); window.LH.showInfo('Error','Unable to save profile'); }
+            };
+          });
+        }
 
         // messages to/from this user
         const inbox = document.getElementById("inboxContainer");
