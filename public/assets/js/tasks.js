@@ -338,7 +338,12 @@
 			myList.innerHTML = '';
 			const user = currentUser();
 			if (user) {
-				allTasks().filter(function (t) { return t.poster === user.username; }).forEach(function (t) { renderTaskCard(t, myList); });
+				const userTasks = allTasks().filter(function (t) { return t.poster === user.username; });
+				if (userTasks.length === 0) {
+					myList.innerHTML = '<p>You have not posted any task yet!</p>';
+				} else {
+					userTasks.forEach(function (t) { renderTaskCard(t, myList); });
+				}
 			} else {
 				myList.innerHTML = '<p>Please sign in to see your tasks.</p>';
 			}
